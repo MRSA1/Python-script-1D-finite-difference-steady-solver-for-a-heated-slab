@@ -1,0 +1,47 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.linalg import solve
+
+# Parameters
+L = 0.01       # half-thickness (m)
+Nx = 50        # grid points
+K = 500.0      # thermal conductivity (W/mK)
+h = 50.0       # convection coefficient (W/m2K)
+q0 = 1e6       # volumetric heating (W/m3)
+T_inf = 300.0  # ambient temperature (K)
+
+# Discretization
+dx = L / (Nx - 1)
+x = np.linspace(0, L, Nx)
+
+# Build system A*T = b
+A = np.zeros((Nx, Nx))
+b = np.zeros(Nx)
+
+for i in range(1, Nx-1):
+    A[i, i-1] = K/dx**2
+    A[i, i]   = -2*K/dx**2
+    A[i, i+1] = K/dx**2
+    b[i] = -q0
+
+# Symmetry BC at x=0 -> dT/dx=0  ~ (T1 - T0)/dx = 0
+A[0,0] = -1; A[0,1] = 1; b[0] = 0
+
+# Convection BC at x=L -> -K*dT/dx = h(T - T_inf)
+# Approximate dT/dx ≈ (T_N - T_{N-1})/dx
+A[-1,-2] = -K/dx
+A[-1,-1] = K/dx + h
+b[-1] = h*T_inf
+
+# Solve
+T = solve(A, b)
+
+# Plot
+plt.plot(x*1e3, T, 'r.-', label="Temperature profile")
+plt.xlabel("x (mm)")
+plt.ylabel("T (K)")
+plt.title("1D slab with uniform Joule heating")
+plt.grid(True); plt.legend()
+plt.show()
+
+print(f"Center temperature: {T[0]:.2f} K, Surface temperature: {T[-1]:.2f} K")
